@@ -1,19 +1,21 @@
 {
     "collab_server" : "",
     "contents" : "",
-    "created" : 1569182412041.000,
+    "created" : 1569188253203.000,
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
     "hash" : "3181504640",
-    "id" : "E119A8F3",
+    "id" : "74C2F1B5",
     "lastKnownWriteTime" : 1488562341,
     "last_content_update" : 1488562341,
     "path" : "~/Desktop/DataAndCoding/NICAR 2017/R scraping/CB_NICAR17.R",
     "project_path" : null,
     "properties" : {
+        "cursorPosition" : "35,38",
+        "scrollLine" : "10"
     },
-    "relative_order" : 2,
+    "relative_order" : 3,
     "source_on_save" : false,
     "source_window" : "",
     "type" : "r_source"
