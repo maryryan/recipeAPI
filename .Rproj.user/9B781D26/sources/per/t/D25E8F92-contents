@@ -58,8 +58,8 @@ OB.content <- fromJSON( OB.reply )
 
 ## Let's see what type of breweries we have in the North County area ##
 # first get all the cities in North County #
-northCounty.html <- read_html( 'https://en.wikipedia.org/wiki/North_County_(San_Diego_area)#Cities')
-NC.cities.nodes <- northCounty.html %>% 
+NC.html <- read_html( 'https://en.wikipedia.org/wiki/North_County_(San_Diego_area)#Cities' )
+NC.cities.nodes <- NC.html %>% 
    html_nodes("ul") %>% 
    html_text()
 
@@ -106,3 +106,45 @@ OB.NC.content.df %>%
    xlab("Brewery Type") + ylab("") +
    theme_light()
 
+## now let's see what types of breweries are in the OC ##
+# first get all the cities in North County #
+OC.html <- read_html( 'https://en.wikipedia.org/wiki/Orange_County,_California#Geography' )
+OC.cities.nodes <- OC.html %>% 
+   html_nodes("ul") %>% 
+   html_text()
+
+OC.IncorpCity.nodes <- trimws( OC.cities.nodes[41] )
+OC.UnIncorpCity.nodes <- trimws( OC.cities.nodes[42:43] )
+
+
+OC.IncorpCity.tbl <- read.table(text = OC.IncorpCity.nodes, sep = "\n", as.is = TRUE)
+OC.UnIncorpCity.tbl <- read.table(text = OC.UnIncorpCity.nodes, sep = "\n", as.is = TRUE)
+
+OC.city.df <- c(OC.IncorpCity.tbl[,1], OC.UnIncorpCity.tbl[,1])
+
+# now we search the API for breweries in those cities #
+OB.OC.content <- list()
+
+for( i in seq( length(OC.city.df) ) ){
+   
+   OB.OC.reply <- getForm( OB.url,
+                           by_state = "california",
+                           by_city = OC.city.df[i] )
+   OB.OC.content[[i]] <- fromJSON( OB.OC.reply )
+   
+}
+
+OB.OC.content.df <- do.call( "rbind", OB.OC.content )
+OB.OC.content.df <- OB.OC.content.df %>% 
+   group_by( brewery_type, city ) %>% 
+   mutate( count = n() )
+
+OB.OC.content.df %>% 
+   ggplot( aes(brewery_type, count,
+               fill=factor(city)) ) + #geom_bar()
+   geom_bar( position='dodge', stat = 'identity' ) +
+   scale_y_continuous(breaks=seq(2,14,2)) +
+   labs(title = "Breweries in Orange County, CA",
+        fill  = "City") +
+   xlab("Brewery Type") + ylab("") +
+   theme_light()

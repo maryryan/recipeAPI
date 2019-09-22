@@ -18,7 +18,7 @@ options( stringsAsFactors = FALSE )
 ## food2fork API ##
 # https://www.food2fork.com/user/api #
 # https://www.food2fork.com/about/api #
-food2fork.key <- 'f6637a087cc80c8c50d1041a47a3a784'
+food2fork.key <- #look it up in your password manager
 
 recipeID.f2f.url <-  'https://www.food2fork.com/api/search'
 recipeDetails.f2f.url <- 'https://www.food2fork.com/api/get'
