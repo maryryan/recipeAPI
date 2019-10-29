@@ -24,7 +24,7 @@ size <- 10
 from <- 1
 page <- 1
 
-query.key <- unlist( strsplit('chicken', " ") )#unlist( strsplit('buddha bowl', " ") )
+query.key <- unlist( strsplit('taco', " ") )#unlist( strsplit('buddha bowl', " ") )
 query.key <- paste0( query.key, collapse="+" )
 
 tasty.api.url <- 'https://tasty.co/api/recipes/search?'
@@ -84,36 +84,99 @@ for( i in 2:ceiling(recipe.count/size) ){
 }
    
 recipe.general.info <- cbind(recipe.names, recipe.slugs, recipe.type)
-
+just.recipes <- which(recipe.general.info[,3] == "recipe")
 
 ## SCRAPE INDIVIDUAL RECIPES ##
+# within a recipe, you can search for a script of type "application/ld+json" that will give you a json including ingredients
 recipe.url <- 'https://tasty.co/recipe/'
 full.ingred <- list()
 
-for( i in seq(recipe.count) ){
+# function to find commas #
+comma.find <- function( string ){
    
-   recipe.html <- read_html( gsub( " ", "", paste(recipe.url, recipe.slugs[i]) ) )
+   df <- str_split( string, "," )
+   extra <- lapply( df, function(x){
+      
+      if( length(x) > 1 ){
+         
+         x[2:length(x)]
+         
+      }else{
+         NA
+      }
+      
+   })
    
-   ingred.json <- recipe.html %>%
-      html_nodes("script") %>% 
-      html_text()
-   
-   ingred.index <- recipe.html %>% 
-      html_nodes("script") %>% 
-      html_attr("type") =="application/ld+json"
-   
-   ingred.json <- na.omit( ingred.json[ingred.index] )
-   
-   ingred.json.parsed <- fromJSON( ingred.json[1] )$recipeIngredient
-   
-   full.ingred[[i]] <- cbind(recipe.names[i], ingred.json.parsed)
-   
+   do.call(rbind, extra)
    
 }
 
 
+for( i in just.recipes ){
+   
+   # compile the recipe URL #
+   recipe.html <- read_html( gsub( " ", "", paste(recipe.url, recipe.slugs[i]) ) )
+   
+   # get all the HTML nodes that are scripts #
+   ingred.json <- recipe.html %>%
+      html_nodes("script") %>% 
+      html_text()
+   
+   # find the index number of the scripts that will contain the ingredient JSON #
+   ingred.index <- recipe.html %>% 
+      html_nodes("script") %>% 
+      html_attr("type") =="application/ld+json"
+   
+   # isolate the ingredient JSON scripts that we want #
+   ingred.json <- na.omit( ingred.json[ingred.index] )
+   
+   # parse the JSON to get the ingredient list #
+   ingred.json.parsed <- fromJSON( ingred.json[1] )$recipeIngredient
+   
+   # separate measurements and extra notes from ingredient names #
+   measurement.words <- c( "cups","cup", "tablespoons", "tablespoon",
+                           "tbsp", "teaspoons", "teaspoon", "tsp", "oz", "lb")
+   measurement.words <- paste(measurement.words, collapse="|")
+   amount.number <- c(seq(30), "½", "⅓", "¼", "¾", "⅔","⅛", "⅖","⅜")
+   amount.number <- paste(amount.number, collapse="|")
+   
+   recipe.amount <- as.numeric(gsub("([0-9]+).*$", "\\1", ingred.json.parsed))
+   recipe.measurement <- str_extract(ingred.json.parsed, measurement.words)
+   
+   #recipe.extra <- comma.find( ingred.json.parsed )
+   
+   # separate ingredients from measurements #
+   recipe.ingred <- gsub(paste(amount.number, "|", measurement.words#, 
+                               #"|",
+                               #paste(recipe.extra, collapse="|")
+                               ),
+                         "\\1", ingred.json.parsed)
+   # trim the leading whitespace #
+   recipe.ingred <- trimws(recipe.ingred)
+   
+   # put it all together #
+   full.ingred[[i]] <- cbind( recipe.names[i], recipe.amount, recipe.measurement,
+                                 recipe.ingred)#, recipe.extra)
+      #cbind(recipe.names[i], ingred.json.parsed)
 
-# within a recipe, you can search for a script of type "application/ld+json" that will give you a json including ingredients
+   
+   
+}
+
+# convert list of dataframes to one big dataframe #
+full.ingred.df <- ldply(full.ingred, data.frame)
+colnames(full.ingred.df)[1] <- "recipe.name"
+
+
+full.ingred.spread <- spread(count(full.ingred.df, recipe.name, recipe.ingred), 
+                             recipe.ingred, n, fill = 0)
+   #spread( as.data.frame(table(full.ingred.df)),recipe.ingred, Freq )
+
+ingred.kmeans <- kmeans(full.ingred.spread[,4:dim(full.ingred.spread)[2]],
+                        10, nstart=20)
+
+
+
 
 #### Stuff I was dicking around with but use for tips ####
 ### SEARCH TASTY FOR RECIPE ###
